@@ -1,0 +1,96 @@
+---
+title: "432 project"
+author: "Arjitha Balaji"
+date: "November 21, 2018"
+output: pdf_document
+---
+
+```{r}
+library(textclean)
+library(tm)
+library(rJava)
+library(textstem)
+library(devtools)
+library(NLP)
+library(openNLP)
+library(plyr)
+library(stringr)
+library(gsubfn)
+
+# read training data
+comments <- read.csv("C:/Users/arjit/OneDrive/Desktop/train.csv")
+
+## DATA CLEANING
+
+comments$comment_text <- as.character(comments$comment_text)
+
+# remove whitespaces
+comments$comment_text <- stripWhitespace(comments$comment_text)
+
+# convert to lower case
+comments$comment_text <- sapply(comments$comment_text, FUN = tolower)
+
+# replace contractions
+comments$comment_text <- replace_contraction(comments$comment_text)
+
+# remove non-ascii characters
+comments$comment_text <- replace_non_ascii(comments$comment_text)
+
+# replace numbers with empty string - since they do not convey info about toxicity
+comments$comment_text <- removeNumbers(comments$comment_text)
+
+# remove punctuation
+comments$comment_text <- removePunctuation(comments$comment_text)
+
+# lemmatization
+comments$comment_text<-lemmatize_words(comments$comment_text)
+
+# remove stopwords
+comments$comment_text <- removeWords(comments$comment_text, stopwords("english"))
+
+# remove whitespaces
+comments$comment_text <- stripWhitespace(comments$comment_text)
+
+# Corpus
+comment_Corpus = SimpleCorpus(VectorSource(comments$comment_text)) 
+
+##dtm<- DocumentTermMatrix(comment_Corpus, control=list(weighting=weightTf()) )
+
+##POS tagging
+tagged_comments <- function(x){
+  s<- as.String(x)
+  word_token_annotator <- Maxent_Word_Token_Annotator()
+  a2 <- Annotation(1L, "sentence", 1L, nchar(s))
+  a2 <- annotate(s, word_token_annotator, a2)
+  a3 <- annotate(s, Maxent_POS_Tag_Annotator(), a2)
+  a3w <- a3[a3$type == "word"]
+  ##idx = which(unlist(a3w$features)=="NN" | unlist(a3w$features)=="JJ" | unlist(a3w$features)=="RB")
+  ##start_vec = a3w$start[idx]
+  ##end_vec = a3w$end[idx]
+  ##nn_vec = sapply(1:length(start_vec), FUN = function(i, s, start_vec, end_vec) return(substr(s,start_vec[i],end_vec[i])), s, start_vec,     end_vec)
+  ##return(nn_vec)
+  tags <- sapply(a3w$features , '[[', "POS")
+  r1 <- sprintf("%s/%s", s[a3w], tags)
+  r2 <- paste(r1, collapse = " ")
+  return(r2)
+}
+
+tagged_str <- data.frame()
+t <- comments$comment_text[c(169, 177, 182, 202, 207, 212, 219, 232, 239, 269, 279, 287, 296, 299, 301, 313, 319, 325, 331, 336, 343, 345, 393, 416, 424, 430, 438, 443, 452, 477, 498, 504, 520, 521, 523, 530)]
+tagged_str <- tagged_comments(t)
+tagged_str
+
+library(spelling)
+spell_check_text("i am a fagget", ignore = character(), lang = "en_US")
+which_misspelled("blah bleh u", suggest=TRUE)
+
+library(hunspell)
+bad<-hunspell(as.String(comments$comment_text[1:1000]))
+print(bad[[1]])
+for(i in 1:1000){
+t<-hunspell_suggest(bad[[1]][i][1])
+t[[1]][1]
+}
+
+```
+
